@@ -58,6 +58,10 @@ minimal_cut = (main_width/4)*0.53;  // Larger values move the main cut (in the y
 rest_cut = (main_width/4)*0.85; // Distance to make the cut that exits the outside of the carriage.
 cut_offset_x = main_width/4+minimal_cut/2;
 
+horn_thickness = 13;
+horn_radius = 8;
+horn_height = 8;
+
 
 roller_y_displacement = -2.5;
 
@@ -86,6 +90,18 @@ module main_part()
         cube([main_width, main_width/2+main_height, main_depth]);
       translate([0, -main_width/2, 0])
         cylinder(r=main_width/2, h=main_depth, $fn = 150, center = true);
+
+      // Ball joint mount horns.
+        union() {
+          translate([0, -main_height-horn_radius/2, 0])
+            #cube([main_width, horn_radius, main_depth], center=true);
+          translate([0, -main_height-horn_radius, 0]) rotate([0,90,0])
+            #cylinder(r=horn_radius, h=main_width, center=true);
+          for (x = [-1, 1]) { 
+            scale([x,1,1]) translate([main_width/2, -main_height-horn_radius, 0]) rotate([0, 90, 0])
+            #cylinder(r1=horn_radius, r2=2.5, h=horn_height);
+        }
+      }
     }
     
     // The center cutout
