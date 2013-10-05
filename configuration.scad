@@ -5,6 +5,8 @@ extra_radius = 0.1;
 m3_nut_od = 6.1;
 m3_nut_radius = m3_nut_od/2 + 0.2 + extra_radius;
 m3_washer_radius = 3.5 + extra_radius;
+m3_nut_thickness = 2.35;
+m3_nyloc_thickness = 3.85;
 
 // Major diameter of metric 3mm thread.
 m3_major = 2.85;
