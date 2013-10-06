@@ -56,9 +56,20 @@ module hotend_fan() {
       cube([8, 40, 40], center=true);
     }
     for (a = [60:60:359]) {
-      rotate([0, 0, a]) translate([0, 12.5, 5]) #
+      rotate([0, 0, a]) translate([0, 12.5, 5]) { #
         cylinder(r=m3_radius, h=12, center=true, $fn=12);
+      }
     }
+    for (a = [60, 300]) {
+      rotate([0, 0, a]) translate([0, 12.5, 6.53])
+        # cylinder(r=m3_nut_radius, h=m3_nyloc_thickness, center = true, $fn=6);
+    }
+    for (a = [120, 240]) {
+      rotate([0, 0, a]) translate([0, 12.5, 8.53-m3_nyloc_thickness/2])
+        # cylinder(r=m3_nut_radius, h=m3_nyloc_thickness*2, center = true, $fn=6);
+    }
+    rotate([0, 0, 180]) translate([0, 12.5, 4.68])
+      # cylinder(r=m3_nut_radius, h=m3_nyloc_thickness, center = true, $fn=6);
   }
 }
 
