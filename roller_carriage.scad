@@ -54,13 +54,14 @@ wheel_extrusion_len = 29.60;
 extra_squeeze = 0.3;
 roller_x_offset = wheel_extrusion_len - roller_r - (extrusion_width / 2) - extra_squeeze;
 //==========
-body_x = roller_x_offset*2 + m3_nut_radius*2+2;
+//body_x = roller_x_offset*2 + m3_nut_radius*2+2;
+body_x = rod_separation;
 body_z = body_floor_z + belt_z + 1;
 body_delta_z = body_z - body_floor_z;
 echo(body_z);
 //==========
-roller_y_offset = (body_x-6)/3/2;
-roller_y_offset_each = (body_x-6)*(0.93)/2;
+roller_y_offset = (body_x-3)/3/2;
+roller_y_offset_each = (body_x-3)*(0.93)/2;
 
 //===========
 // Tensioner cut
@@ -99,11 +100,14 @@ module center_cutout() {
   difference() {
     union() {
       // Square cutout
-      translate([0, -body_x/4, 0])
-        cube([body_x/2, body_x/2, body_z], center = true);
+      translate([-body_x/8, -body_x/4, 0])
+        cube([body_x/4, body_x/2, body_z], center = true);
       // Oval cutout at rounded end
       translate([0, -body_x/2, 0])
-        oval(body_x/4, body_x/3, body_z, $fn = 50, center = true);
+        intersection() {
+          oval(body_x/4, body_x/3, body_z, $fn = 50, center = true);
+          translate([-body_x/4, 0, 0]) cube([body_x/2, body_x, body_z], center = true);
+        }
     }
     translate([body_x/8-corner_radius/2, -body_x/4-corner_radius/2, -body_z/2+body_floor_z/2])
       cube([body_x/4+corner_radius, body_x/2+corner_radius, body_floor_z], center = true);
@@ -123,7 +127,6 @@ module temp() {
     translate([belt_x-corner_radius, -body_x, 0])
       cube([corner_radius*2, body_x/2, 100], center = true);
   }
-*/
 
   intersection() {
     translate([25+tunnel_width/2, -25-body_y/2+corner_radius, 0])
@@ -131,9 +134,10 @@ module temp() {
     translate([0, -body_x/2, 0])
       cylinder(r=body_x/2, h=body_z, $fn = 150, center = true);
   }
+*/
 
   translate([belt_x-corner_radius, body_y-4.75, 0])
-    #cube([corner_radius*2, 9.5, body_z], center = true);
+    cube([corner_radius*2, 9.5, body_z], center = true);
 
   intersection() {
     translate([0, -body_x/2, 0])
@@ -203,7 +207,7 @@ module tensioner()
     }
   }
   // Nut trap for tensioning screw
-  translate([0, 0, -1.5]) translate([body_x/2-m3_nyloc_thickness, body_x/8, 0]) {
+  translate([0.01, 0, -1.5]) translate([body_x/2-m3_nyloc_thickness, body_x/8, 0]) {
     rotate([0, 90, 0])
       m3_nut();
   }
@@ -216,11 +220,11 @@ module tensioner()
 
 module rollers()
 {
-  translate([0, -roller_y_offset-2, 0]) {
+  translate([0, -roller_y_offset-1.5, 0]) {
     for (i=[[1,-1], [1,1], [-1,0]]) {
       translate([i[0]*roller_x_offset, i[1]*roller_y_offset_each, body_z/2-m3_nyloc_thickness]) {
         m3_rod();
-        rotate([0,0,30]) m3_nut();
+        rotate([0,0,60]) m3_nut();
       }
     }
   }
@@ -230,7 +234,10 @@ module rollers()
 module main_carriage()
 {
   timing_belt();
-  temp();
+  difference() {
+    temp();
+    rollers();
+  }
   difference() {
     union() {
       main_part();
