@@ -3,9 +3,34 @@ include <configuration.scad>;
 //=========
 // Constants
 //=========
-main_width = 40;
-main_height = 20;
-main_depth = 19.5-3.3;
+// 8.32 from beam to start of carriage
+// 19.5 from beam to belt
+// 20 from beam to rod center
+// with 30mm screw, that's a max height of 21.60
+// the rod separation is 40mm, unless you modify the effector too
+
+rod_separation = 40;
+body_floor_z = 19.5 - 8.32;
+//rod_offset_z = 19.5-m3_nut_thickness;
+
+belt_x = 5.6;
+belt_z = 6+1;
+belt_width = 1.5;
+//
+//========
+// Variables
+//========
+body_y = 30;
+
+
+horn_thickness = 3;
+horn_radius = 8;
+horn_height = 8;
+corner_radius = 3;
+
+//=======
+// Calculated variables
+//=======
 
 //========
 // Extrusion and roller size
@@ -16,8 +41,6 @@ roller_r = roller_dia / 2;
 // Using calipers, measure from the edge of the extrusion to side of the wheel.
 // This dimension must be slightly less than the sum of the extrusion width + roller dia. 
 wheel_extrusion_len = 29.60;
-
-//==========
 
 
 
@@ -30,27 +53,26 @@ wheel_extrusion_len = 29.60;
 // tension.
 extra_squeeze = 0.3;
 roller_x_offset = wheel_extrusion_len - roller_r - (extrusion_width / 2) - extra_squeeze;
-roller_y_offset = (main_width/3)/2;
-roller_y_offset_each = main_width*(0.93)/2;
+//==========
+body_x = roller_x_offset*2 + m3_nut_radius*2+2;
+body_z = body_floor_z + belt_z + 1;
+body_delta_z = body_z - body_floor_z;
+echo(body_z);
+//==========
+roller_y_offset = (body_x-6)/3/2;
+roller_y_offset_each = (body_x-6)*(0.93)/2;
 
 //===========
 // Tensioner cut
 //===========
 cut_width = 2.0;  // Width of cut
-minimal_cut = (main_width/4)*0.53;  // Larger values move the main cut (in the y dir) outwards.
-rest_cut = (main_width/4)*0.85; // Distance to make the cut that exits the outside of the carriage.
-cut_offset_x = main_width/4+minimal_cut/2;
-
-horn_thickness = 13;
-horn_radius = 8;
-horn_height = 8;
-corner_radius = 3.5;
-
-belt_x = 5.6;
-belt_z = 7;
+minimal_cut = (body_x/4)*0.53;  // Larger values move the main cut (in the y dir) outwards.
+rest_cut = (body_x/4)*0.85; // Distance to make the cut that exits the outside of the carriage.
+cut_offset_x = body_x/4+minimal_cut/2;
 
 
 
+tunnel_width = belt_x*2+belt_width*2+1;
 
 
 module oval(w, h, height, center = false) {
@@ -66,85 +88,137 @@ module m3_nut(center = false) {
 module main_part()
 {
   // The main part
-  translate([-main_width/2,-main_height,-main_depth/2])
-    cube([main_width, main_width/2+main_height, main_depth]);
-  translate([0, -main_width/2, 0])
-    cylinder(r=main_width/2, h=main_depth, $fn = 150, center = true);
-}
-
-module rod_horns() {
-  // Ball joint mount horns.
-  difference() {
-    union() {
-      translate([0, main_height+horn_radius/2, 0])
-        cube([main_width, horn_radius-horn_height, main_depth], center=true);
-      translate([0, main_height+horn_radius, 0]) rotate([0,90,0])
-        cylinder(r=horn_radius, h=main_width-horn_height, center=true);
-      for (x = [-1, 1]) { 
-        scale([x,1,1]) translate([main_width/2-horn_height/2, main_height+horn_radius, 0]) rotate([0, 90, 0])
-        cylinder(r1=horn_radius, r2=2.5, h=horn_height);
-      }
-    }
-    translate([0, main_height+horn_radius, 0]) rotate([0,90,0])
-      m3_rod();
-  }
-}
-
-module timing_belt() {
-  // Belt clamps
-  for (y = [[-corner_radius, -1], [-main_width/2+corner_radius/2, 1]]) {
-    translate([belt_x, y[0], 0])
-    color("red") hull() {
-      translate([ corner_radius-1,  -y[1] * corner_radius + y[1], 0]) cube([2, 2, main_depth], center=true);
-      cylinder(h=main_depth, r=corner_radius, $fn=12, center=true);
-    }
-  }
+  translate([-body_x/2, -body_x/2, -body_z/2])
+    cube([body_x, body_x/2+body_y, body_z]);
+  translate([0, -body_x/2, 0])
+    cylinder(r=body_x/2, h=body_z, $fn = 150, center = true);
 }
 
 module center_cutout() {
   // The center cutout
-  union() {
-    // Square cutout
-    translate([0, -main_width/4, 0]) {
-      cube([main_width/2, main_width/2, main_depth + 2], center = true);
+  difference() {
+    union() {
+      // Square cutout
+      translate([0, -body_x/4, 0])
+        cube([body_x/2, body_x/2, body_z], center = true);
+      // Oval cutout at rounded end
+      translate([0, -body_x/2, 0])
+        oval(body_x/4, body_x/3, body_z, $fn = 50, center = true);
     }
-    // Oval cutout at rounded end
-    translate([0, -main_width/2, 0]) {
-      oval(main_width/4, main_width/3, main_depth + 2, $fn = 50, center = true);
-    }  
+    translate([body_x/8-corner_radius/2, -body_x/4-corner_radius/2, -body_z/2+body_floor_z/2])
+      cube([body_x/4+corner_radius, body_x/2+corner_radius, body_floor_z], center = true);
   }
 }
+
+module temp() {
+/*
+  intersection() {
+    difference() {
+      translate([0, -body_x/2, 0])
+        cylinder(r=body_x/2, h=body_z, $fn = 150, center = true);
+      // Oval cutout at rounded end
+      translate([0, -body_x/2, 0])
+        oval(body_x/4, body_x/3, body_z, $fn = 50, center = true);
+    }
+    translate([belt_x-corner_radius, -body_x, 0])
+      cube([corner_radius*2, body_x/2, 100], center = true);
+  }
+*/
+
+  intersection() {
+    translate([25+tunnel_width/2, -25-body_y/2+corner_radius, 0])
+      cube([50, 50, body_z], center = true);
+    translate([0, -body_x/2, 0])
+      cylinder(r=body_x/2, h=body_z, $fn = 150, center = true);
+  }
+
+  translate([belt_x-corner_radius, body_y-4.75, 0])
+    #cube([corner_radius*2, 9.5, body_z], center = true);
+
+  intersection() {
+    translate([0, -body_x/2, 0])
+      cylinder(r=body_x/2, h=body_z, $fn = 150, center = true);
+    translate([belt_x-corner_radius, -body_x-2.5, 0])
+      cube([corner_radius*2, body_x, 100], center = true);
+  }
+  translate([5, -25, -body_delta_z/2])
+    cube([10, 10, body_z-body_delta_z], center = true);
+}
+
+module belt_tunnel() {
+  translate([0,0,body_z/2-body_delta_z/2])
+    cube([tunnel_width, 100, body_delta_z], center = true);
+}
+
+module timing_belt() {
+  // Belt clamps
+  for (y = [-1, 1]) {
+    translate([belt_x-corner_radius, y*body_y/2, 0])
+      hull() {
+        translate([corner_radius-1, y * corner_radius - y, 0])
+          cube([2, 2, body_z], center=true);
+        cylinder(h=body_z, r=corner_radius, $fn=12, center=true);
+      }
+  }
+}
+
+module rod_horns() {
+  // Ball joint mount horns.
+  translate([0, body_y-horn_radius, horn_radius+m3_radius*2]) difference() {
+    union() {
+      translate([0, 0, body_z/2-horn_radius]) {
+        // fill to the border of belt tunnel
+        for (x = [-1, 1]) { 
+          translate([x*(tunnel_width/2+(body_x/2-horn_height-tunnel_width/2)/2), 0, 0]) // effing annoying
+            cube([body_x/2-horn_height-tunnel_width/2,horn_radius*2, horn_radius*2], center = true);
+          // the two horns
+          scale([x,1,1]) intersection() {
+            cube([body_x, horn_radius*2, horn_radius*2], center = true);
+            translate([body_x/2-horn_height, 0, 0]) rotate([0, 90, 0])
+              cylinder(r1=14, r2=2.5, h=horn_height);
+          }
+        }
+      }
+    }
+    translate([0, 0, body_z/2-horn_radius]) rotate([0, 90, 0]) {
+      m3_rod();
+      rotate([0, 0, 90]) translate([0, 0, tunnel_width/2]) m3_nut();
+      rotate([0, 0, 90]) translate([0, 0, -m3_nyloc_thickness-tunnel_width/2]) m3_nut();
+    }
+  }
+}
+
 
 module tensioner()
 {
   // Cut from center of part out, along x
   translate([-cut_offset_x, -cut_width/2, 0]) {
-    cube([minimal_cut+cut_width, cut_width, main_depth + 2], center = true);
+    cube([minimal_cut+cut_width, cut_width, body_z + 2], center = true);
   }
   // Cut along y and corresponding screw hole through body
-  translate([-cut_offset_x-minimal_cut/2, main_width/8, 0]) {
-    cube([cut_width, main_width/4+cut_width, main_depth + 2], center = true);
-    translate([0, 1, 0]) rotate([0, 90, 0]) {
+  translate([-cut_offset_x-minimal_cut/2, body_x/8, 0]) {
+    cube([cut_width, body_x/4+cut_width, body_z + 2], center = true);
+    translate([0, 0, -1.5]) rotate([0, 90, 0]) {
       m3_rod();
     }
   }
   // Nut trap for tensioning screw
-  translate([0, 1, 0]) translate([main_width/2-m3_nyloc_thickness, main_width/8, 0]) {
+  translate([0, 0, -1.5]) translate([body_x/2-m3_nyloc_thickness, body_x/8, 0]) {
     rotate([0, 90, 0])
       m3_nut();
   }
 
   // Cut to outer edge of part, along x
-  translate([-main_width/4-rest_cut, main_width/4, 0]) {
-    cube([rest_cut, cut_width, main_depth + 2], center = true);
+  translate([-body_x/4-rest_cut, body_x/4, 0]) {
+    cube([rest_cut, cut_width, body_z + 2], center = true);
   }
 }
 
 module rollers()
 {
-  translate([0, -roller_y_offset, 0]) {
+  translate([0, -roller_y_offset-2, 0]) {
     for (i=[[1,-1], [1,1], [-1,0]]) {
-      translate([i[0]*roller_x_offset, i[1]*roller_y_offset_each, main_depth/2-m3_nyloc_thickness]) {
+      translate([i[0]*roller_x_offset, i[1]*roller_y_offset_each, body_z/2-m3_nyloc_thickness]) {
         m3_rod();
         rotate([0,0,30]) m3_nut();
       }
@@ -152,16 +226,19 @@ module rollers()
   }
 }
 
+
 module main_carriage()
 {
+  timing_belt();
+  temp();
   difference() {
     union() {
       main_part();
       rod_horns();
-      # timing_belt();
     }
 
     center_cutout();
+    belt_tunnel();
 
     // Cut, plus corresponding screw and nut trap.
     tensioner();
@@ -171,4 +248,5 @@ module main_carriage()
   }
 }
 
-translate([0, 0, main_depth/2]) main_carriage();
+//translate([0, 0, body_z/2]) main_carriage();
+main_carriage();
