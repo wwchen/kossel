@@ -16,6 +16,7 @@ body_floor_z = 19.5 - 8.32;
 belt_x = 5.6;
 belt_z = 6+1;
 belt_width = 1.5;
+clamped_belt_width = 2.3;
 //
 //========
 // Variables
@@ -93,6 +94,7 @@ module main_part()
     cube([body_x, body_x/2+body_y, body_z]);
   translate([0, -body_x/2, 0])
     cylinder(r=body_x/2, h=body_z, $fn = 150, center = true);
+  rod_horns();
 }
 
 module center_cutout() {
@@ -114,56 +116,35 @@ module center_cutout() {
   }
 }
 
-module temp() {
-/*
-  intersection() {
-    difference() {
-      translate([0, -body_x/2, 0])
-        cylinder(r=body_x/2, h=body_z, $fn = 150, center = true);
-      // Oval cutout at rounded end
-      translate([0, -body_x/2, 0])
-        oval(body_x/4, body_x/3, body_z, $fn = 50, center = true);
-    }
-    translate([belt_x-corner_radius, -body_x, 0])
-      cube([corner_radius*2, body_x/2, 100], center = true);
-  }
-
-  intersection() {
-    translate([25+tunnel_width/2, -25-body_y/2+corner_radius, 0])
-      cube([50, 50, body_z], center = true);
-    translate([0, -body_x/2, 0])
-      cylinder(r=body_x/2, h=body_z, $fn = 150, center = true);
-  }
-*/
-
-  translate([belt_x-corner_radius, body_y-4.75, 0])
-    cube([corner_radius*2, 9.5, body_z], center = true);
-
-  intersection() {
-    translate([0, -body_x/2, 0])
-      cylinder(r=body_x/2, h=body_z, $fn = 150, center = true);
-    translate([belt_x-corner_radius, -body_x-2.5, 0])
-      cube([corner_radius*2, body_x, 100], center = true);
-  }
-  translate([5, -25, -body_delta_z/2])
-    cube([10, 10, body_z-body_delta_z], center = true);
-}
-
 module belt_tunnel() {
   translate([0,0,body_z/2-body_delta_z/2])
     cube([tunnel_width, 100, body_delta_z], center = true);
 }
 
-module timing_belt() {
+module timing_belt(var = 1) {
   // Belt clamps
-  for (y = [-1, 1]) {
-    translate([belt_x-corner_radius, y*body_y/2, 0])
-      hull() {
-        translate([corner_radius-1, y * corner_radius - y, 0])
-          cube([2, 2, body_z], center=true);
-        cylinder(h=body_z, r=corner_radius, $fn=12, center=true);
-      }
+  translate([tunnel_width/2-corner_radius-clamped_belt_width, 0, 0]) {
+    for (y = [-1, 1]) translate([0, y*body_y/2, 0]) {
+        hull() {
+          translate([corner_radius-1, y * corner_radius - y, 0])
+            cube([2, 2, body_z], center=true);
+          cylinder(h=body_z, r=corner_radius, $fn=12, center=true);
+        }
+    }
+
+    // FIXME I donno know to have variables
+    for( len = [body_y/2+corner_radius+belt_width+1.5]) {
+      // top left wall
+      translate([0, body_y-(body_y-len)/2, 0])
+        cube([corner_radius*2, body_y-len, body_z], center = true);
+      // bottom left wall
+      translate([0, -body_x+(body_x-len)/2, 0])
+        cube([corner_radius*2, body_x-len, body_z], center = true);
+    }
   }
+  // FIXME fill in the hole under the botom corridor
+  translate([5, -25, -body_delta_z/2])
+    #cube([10, 10, body_z-body_delta_z], center = true);
 }
 
 module rod_horns() {
@@ -233,25 +214,24 @@ module rollers()
 
 module main_carriage()
 {
-  timing_belt();
-  difference() {
-    temp();
-    rollers();
-  }
-  difference() {
+  intersection() {
     union() {
-      main_part();
-      rod_horns();
+      timing_belt();
+      difference() {
+        main_part();
+
+        center_cutout();
+        belt_tunnel();
+
+        // Cut, plus corresponding screw and nut trap.
+        tensioner();
+
+        // Holes for rollers
+        rollers();
+
+      }
     }
-
-    center_cutout();
-    belt_tunnel();
-
-    // Cut, plus corresponding screw and nut trap.
-    tensioner();
-
-    // Holes for rollers
-    rollers();
+    main_part(); // trim everything outside the perimeter
   }
 }
 
